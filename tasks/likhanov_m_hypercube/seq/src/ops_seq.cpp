@@ -27,10 +27,10 @@ bool LikhanovMHypercubeSEQ::RunImpl() {
   const std::uint64_t vertices = static_cast<std::uint64_t>(1) << dimension;
   std::uint64_t total_edges = 0;
 
-  for (std::uint64_t v = 0; v < vertices; ++v) {
+  for (std::uint64_t vertex = 0; vertex < vertices; ++vertex) {
     for (InType bit = 0; bit < dimension; ++bit) {
-      const std::uint64_t neighbor = v ^ (1ULL << bit);
-      if (v < neighbor) {
+      const std::uint64_t neighbor = vertex ^ (1ULL << bit);
+      if (vertex < neighbor) {
         ++total_edges;
       }
     }

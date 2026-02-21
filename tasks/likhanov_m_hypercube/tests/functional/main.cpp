@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 #include <mpi.h>
 
-#include <array>
 #include <cstdint>
+#include <string>
 #include <tuple>
 
 #include "likhanov_m_hypercube/common/include/common.hpp"
@@ -13,24 +13,45 @@ namespace likhanov_m_hypercube {
 
 using TestParam = std::tuple<InType>;
 
-static std::uint64_t ReferenceEdges(InType n) {
+namespace {
+
+[[nodiscard]] std::uint64_t ReferenceEdges(InType n) {
   return static_cast<std::uint64_t>(n) * (static_cast<std::uint64_t>(1) << (n - 1));
 }
+
+template <typename TaskType>
+void ValidateTask(TaskType &task) {
+  ASSERT_TRUE(task.Validation());
+  ASSERT_TRUE(task.PreProcessing());
+}
+
+template <typename TaskType>
+void RunTask(TaskType &task) {
+  ASSERT_TRUE(task.Run());
+  ASSERT_TRUE(task.PostProcessing());
+}
+
+template <typename TaskType>
+void RunAndValidateTask(TaskType &task) {
+  ValidateTask(task);
+  RunTask(task);
+}
+
+auto hypercube_test_name_generator = [](const testing::TestParamInfo<TestParam> &info) {
+  return "N" + std::to_string(std::get<0>(info.param));
+};
+
+}  // namespace
 
 class LikhanovMHypercubeRunFuncTests : public ::testing::TestWithParam<TestParam> {};
 
 TEST_P(LikhanovMHypercubeRunFuncTests, SeqCorrectness) {
   const InType n = std::get<0>(GetParam());
-
   LikhanovMHypercubeSEQ task(n);
 
-  ASSERT_TRUE(task.Validation());
-  ASSERT_TRUE(task.PreProcessing());
-  ASSERT_TRUE(task.Run());
-  ASSERT_TRUE(task.PostProcessing());
+  RunAndValidateTask(task);
 
-  const OutType expected = static_cast<OutType>(ReferenceEdges(n));
-
+  const auto expected = static_cast<OutType>(ReferenceEdges(n));
   EXPECT_EQ(task.GetOutput(), expected);
 }
 
@@ -41,26 +62,21 @@ TEST_P(LikhanovMHypercubeRunFuncTests, MpiMatchesSeq) {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   LikhanovMHypercubeMPI mpi_task(n);
-
-  ASSERT_TRUE(mpi_task.Validation());
-  ASSERT_TRUE(mpi_task.PreProcessing());
-  ASSERT_TRUE(mpi_task.Run());
-  ASSERT_TRUE(mpi_task.PostProcessing());
+  RunAndValidateTask(mpi_task);
 
   if (rank == 0) {
     LikhanovMHypercubeSEQ seq_task(n);
-
-    ASSERT_TRUE(seq_task.Validation());
-    ASSERT_TRUE(seq_task.PreProcessing());
-    ASSERT_TRUE(seq_task.Run());
-    ASSERT_TRUE(seq_task.PostProcessing());
+    RunAndValidateTask(seq_task);
 
     EXPECT_EQ(mpi_task.GetOutput(), seq_task.GetOutput());
   }
 }
 
+namespace {
 INSTANTIATE_TEST_SUITE_P(HypercubeTests, LikhanovMHypercubeRunFuncTests,
                          ::testing::Values(std::make_tuple(1), std::make_tuple(2), std::make_tuple(3),
-                                           std::make_tuple(4), std::make_tuple(5), std::make_tuple(6)));
+                                           std::make_tuple(4), std::make_tuple(5), std::make_tuple(6)),
+                         hypercube_test_name_generator);
+}  // namespace
 
 }  // namespace likhanov_m_hypercube

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 #include "likhanov_m_hypercube/common/include/common.hpp"
 #include "task/include/task.hpp"
 
@@ -17,6 +19,8 @@ class LikhanovMHypercubeMPI : public BaseTask {
   bool PreProcessingImpl() override;
   bool RunImpl() override;
   bool PostProcessingImpl() override;
+  [[nodiscard]] static bool IsPowerOfTwo(int value);
+  [[nodiscard]] static std::uint64_t ComputeLocalEdges(std::uint64_t start, std::uint64_t end, InType n);
 };
 
 }  // namespace likhanov_m_hypercube

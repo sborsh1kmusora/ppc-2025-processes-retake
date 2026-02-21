@@ -2,7 +2,6 @@
 
 #include <mpi.h>
 
-#include <algorithm>
 #include <cmath>
 #include <cstdint>
 
@@ -35,7 +34,7 @@ bool LikhanovMHypercubeMPI::RunImpl() {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  if (!(size > 0 && ((size & (size - 1)) == 0))) {
+  if (!IsPowerOfTwo(size)) {
     return false;
   }
 
@@ -44,27 +43,19 @@ bool LikhanovMHypercubeMPI::RunImpl() {
 
   const std::uint64_t vertices = static_cast<std::uint64_t>(1) << n;
 
-  const std::uint64_t u_rank = static_cast<std::uint64_t>(rank);
-  const std::uint64_t u_size = static_cast<std::uint64_t>(size);
+  const auto u_rank = static_cast<std::uint64_t>(rank);
+  const auto u_size = static_cast<std::uint64_t>(size);
 
   const std::uint64_t chunk = vertices / u_size;
   const std::uint64_t remainder = vertices % u_size;
 
-  const std::uint64_t start = u_rank * chunk + (u_rank < remainder ? u_rank : remainder);
+  const std::uint64_t start = (u_rank * chunk) + (u_rank < remainder ? u_rank : remainder);
 
   const std::uint64_t local_size = chunk + (u_rank < remainder ? 1ULL : 0ULL);
 
   const std::uint64_t end = start + local_size;
 
-  std::uint64_t local_edges = 0;
-  for (std::uint64_t v = start; v < end; ++v) {
-    for (InType bit = 0; bit < n; ++bit) {
-      const std::uint64_t neighbor = v ^ (1ULL << bit);
-      if (v < neighbor) {
-        ++local_edges;
-      }
-    }
-  }
+  std::uint64_t local_edges = ComputeLocalEdges(start, end, n);
 
   std::uint64_t sum = local_edges;
 
@@ -74,12 +65,11 @@ bool LikhanovMHypercubeMPI::RunImpl() {
     if ((rank & (1 << k)) != 0) {
       MPI_Send(&sum, 1, MPI_UINT64_T, partner, 0, MPI_COMM_WORLD);
       break;
-    } else {
-      if (partner < size) {
-        std::uint64_t received = 0;
-        MPI_Recv(&received, 1, MPI_UINT64_T, partner, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        sum += received;
-      }
+    }
+    if (partner < size) {
+      std::uint64_t received = 0;
+      MPI_Recv(&received, 1, MPI_UINT64_T, partner, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      sum += received;
     }
   }
 
@@ -88,6 +78,25 @@ bool LikhanovMHypercubeMPI::RunImpl() {
   GetOutput() = static_cast<OutType>(sum);
 
   return true;
+}
+
+bool LikhanovMHypercubeMPI::IsPowerOfTwo(int value) {
+  return value > 0 && ((value & (value - 1)) == 0);
+}
+
+std::uint64_t LikhanovMHypercubeMPI::ComputeLocalEdges(std::uint64_t start, std::uint64_t end, InType n) {
+  std::uint64_t local_edges = 0;
+
+  for (std::uint64_t vertex = start; vertex < end; ++vertex) {
+    for (InType bit = 0; bit < n; ++bit) {
+      const std::uint64_t neighbor = vertex ^ (1ULL << bit);
+      if (vertex < neighbor) {
+        ++local_edges;
+      }
+    }
+  }
+
+  return local_edges;
 }
 
 bool LikhanovMHypercubeMPI::PostProcessingImpl() {
