@@ -3,16 +3,17 @@
 
 #include <array>
 #include <cmath>
+#include <cstddef>
 #include <functional>
 #include <memory>
 #include <string>
 #include <tuple>
-#include <utility>
 #include <vector>
 
 #include "likhanov_m_global_optimization/common/include/common.hpp"
 #include "likhanov_m_global_optimization/mpi/include/ops_mpi.hpp"
 #include "likhanov_m_global_optimization/seq/include/ops_seq.hpp"
+#include "task/include/task.hpp"
 #include "util/include/func_test_util.hpp"
 #include "util/include/util.hpp"
 
@@ -26,7 +27,7 @@ class LikhanovMGlobalOptimizationRunFuncTests : public ppc::util::BaseRunFuncTes
 
  protected:
   void SetUp() override {
-    TestType params = std::get<static_cast<std::size_t>(ppc::util::GTestParamIndex::kTestParams)>(this->GetParam());
+    TestType params = std::get<static_cast<std::size_t>(ppc::util::GTestParamIndex::kTestParams)>(GetParam());
 
     input_data_ = std::get<0>(params);
   }
@@ -77,7 +78,7 @@ auto GenerateParams() {
 }
 
 TEST_P(LikhanovMGlobalOptimizationRunFuncTests, GlobalOptimization) {
-  ExecuteTest(this->GetParam());
+  ExecuteTest(GetParam());
 }
 
 INSTANTIATE_TEST_SUITE_P(LikhanovMGlobalOptimization, LikhanovMGlobalOptimizationRunFuncTests,

@@ -1,9 +1,11 @@
 #include "likhanov_m_global_optimization/seq/include/ops_seq.hpp"
 
+#include <algorithm>
+#include <cmath>
+#include <cstddef>
 #include <vector>
 
 #include "likhanov_m_global_optimization/common/include/common.hpp"
-#include "util/include/util.hpp"
 
 namespace likhanov_m_global_optimization {
 
@@ -37,7 +39,7 @@ bool LikhanovMGlobalOptimizationSEQ::RunImpl() {
     double R;
   };
 
-  auto f = [](double x, double y) { return (x - 1.5) * (x - 1.5) + (y + 2.0) * (y + 2.0); };
+  auto f = [](double x, double y) { return ((x - 1.5) * (x - 1.5)) + ((y + 2.0) * (y + 2.0)); };
 
   std::vector<Rect> rects;
   rects.push_back({x_min, x_max, y_min, y_max, 0.0});
@@ -55,11 +57,11 @@ bool LikhanovMGlobalOptimizationSEQ::RunImpl() {
       double dx = r.x2 - r.x1;
       double dy = r.y2 - r.y1;
 
-      double diag = std::sqrt(dx * dx + dy * dy);
+      double diag = std::sqrt((dx * dx) + (dy * dy));
 
       double val = f(xc, yc);
 
-      r.R = val - m * diag;
+      r.R = val - (m * diag);
 
       if (r.R > max_r) {
         max_r = r.R;
@@ -88,7 +90,7 @@ bool LikhanovMGlobalOptimizationSEQ::RunImpl() {
     best_val = std::min(best_val, f(xc, yc));
   }
 
-  GetOutput() = best_val;
+  GetOutput() = static_cast<int>(best_val);
 
   return true;
 }
